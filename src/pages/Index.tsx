@@ -42,9 +42,13 @@ export default function Index() {
     setAppState('analysis');
   };
 
-  // Redirect authenticated users to dashboard
-  if (user && appState === 'userSelection') {
-    setAppState('dashboard');
+  // Redirect users based on authentication state
+  if (!loading) {
+    if (user && (appState === 'userSelection' || appState === 'auth')) {
+      setAppState('dashboard');
+    } else if (!user && (appState !== 'auth' && appState !== 'userSelection')) {
+      setAppState('auth');
+    }
   }
 
   // Show loading while checking authentication
@@ -66,7 +70,7 @@ export default function Index() {
       return (
         <Auth 
           onBack={() => setAppState('userSelection')} 
-          selectedUserType={selectedUserType}
+          selectedUserType=""
         />
       );
     case 'dashboard':
