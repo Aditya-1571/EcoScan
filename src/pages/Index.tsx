@@ -5,17 +5,26 @@ import { PlasticAnalysisResult } from "@/components/PlasticAnalysisResult";
 import { VendorMarketplace } from "@/components/VendorMarketplace";
 import { Dashboard } from "@/components/Dashboard";
 import { PlasticStorage } from "@/components/PlasticStorage";
+import Auth from "./Auth";
+import { useAuth } from "@/hooks/useAuth";
 
-type AppState = 'userSelection' | 'dashboard' | 'camera' | 'analysis' | 'marketplace' | 'storage';
+type AppState = 'userSelection' | 'auth' | 'dashboard' | 'camera' | 'analysis' | 'marketplace' | 'storage';
 
 export default function Index() {
   const [appState, setAppState] = useState<AppState>('userSelection');
   const [capturedImage, setCapturedImage] = useState<string>('');
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [selectedUserType, setSelectedUserType] = useState<string>('');
+  const { user, loading } = useAuth();
 
   const handleUserTypeSelect = (userType: string) => {
     console.log('Selected user type:', userType);
-    setAppState('dashboard');
+    setSelectedUserType(userType);
+    if (user) {
+      setAppState('dashboard');
+    } else {
+      setAppState('auth');
+    }
   };
 
   const handleImageCaptured = (image: string) => {
@@ -33,9 +42,33 @@ export default function Index() {
     setAppState('analysis');
   };
 
+  // Redirect authenticated users to dashboard
+  if (user && appState === 'userSelection') {
+    setAppState('dashboard');
+  }
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   switch (appState) {
     case 'userSelection':
       return <UserTypeSelector onSelect={handleUserTypeSelect} />;
+    case 'auth':
+      return (
+        <Auth 
+          onBack={() => setAppState('userSelection')} 
+          selectedUserType={selectedUserType}
+        />
+      );
     case 'dashboard':
       return (
         <Dashboard

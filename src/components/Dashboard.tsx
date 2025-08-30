@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Camera, Leaf, Recycle, AlertTriangle, TreePine, Droplets, Heart, Package } from "lucide-react";
+import { Camera, Leaf, Recycle, AlertTriangle, TreePine, Droplets, Heart, Package, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 interface DashboardProps {
   onStartScanning: () => void;
   onViewStorage: () => void;
@@ -12,6 +13,7 @@ export const Dashboard = ({
   onViewStorage
 }: DashboardProps) => {
   const [currentTip, setCurrentTip] = useState(0);
+  const { signOut } = useAuth();
   const pollutionFacts = ["Every minute, 1 million plastic bottles are purchased worldwide", "Only 9% of all plastic ever made has been recycled", "Plastic takes 400-1000 years to decompose in landfills", "8 million tons of plastic waste enters oceans annually", "Microplastics are found in 90% of table salt brands"];
   const ecoTips = ["Use reusable bags when shopping", "Choose products with minimal packaging", "Recycle properly according to local guidelines", "Support businesses that use eco-friendly packaging", "Reduce single-use plastics in daily life"];
   return <div className="min-h-screen bg-gradient-hero">
@@ -32,6 +34,10 @@ export const Dashboard = ({
             <Button variant="camera" onClick={onStartScanning} className="flex items-center gap-2">
               <Camera className="h-4 w-4" />
               Start Scanning
+            </Button>
+            <Button variant="outline" onClick={signOut} className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              Sign Out
             </Button>
           </div>
         </div>
