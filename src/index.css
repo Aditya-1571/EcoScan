@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 157 23% 15%;
+    --foreground: 0 0% 98%;
+    --card: 157 25% 18%;
+    --card-foreground: 0 0% 98%;
+    --popover: 157 25% 18%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 142 69% 58%;
+    --primary-foreground: 157 23% 15%;
+    --primary-light: 142 69% 68%;
+    --primary-glow: 142 69% 78%;
+    --secondary: 157 15% 25%;
+    --secondary-foreground: 0 0% 98%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 157 23% 15%;
+    --muted: 157 15% 25%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 142 69% 58%;
+    --accent-foreground: 157 23% 15%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 157 15% 30%;
+    --input: 157 15% 25%;
+    --ring: 142 69% 58%;
+    --radius: 0.75rem;
+    
+    /* Sidebar colors */
+    --sidebar-background: 157 25% 18%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 142 69% 58%;
+    --sidebar-primary-foreground: 157 23% 15%;
+    --sidebar-accent: 157 15% 25%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 157 15% 30%;
+    --sidebar-ring: 142 69% 58%;
+
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(142 69% 58%), hsl(142 69% 68%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%));
+    --gradient-eco: linear-gradient(135deg, hsl(142 69% 58%) 0%, hsl(142 76% 36%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(157 25% 18% / 0.8), hsl(142 69% 58% / 0.1));
+    --gradient-hero: linear-gradient(135deg, hsl(157 23% 15%) 0%, hsl(157 25% 18%) 100%);
+    
+    /* Custom shadows */
+    --shadow-eco: 0 10px 30px -10px hsl(142 69% 58% / 0.3);
+    --shadow-card: 0 4px 20px -4px hsl(142 69% 58% / 0.15);
+    --shadow-button: 0 2px 10px hsl(142 69% 58% / 0.2);
+    
+    /* Custom transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
