@@ -2,23 +2,52 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Camera, Upload, ArrowLeft, Zap, FileImage } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface CameraInterfaceProps {
   onBack: () => void;
-  onImageCaptured: (image: string) => void;
+  onImageCaptured: (image: string, analysis: any) => void;
 }
 
 export const CameraInterface = ({ onBack, onImageCaptured }: CameraInterfaceProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
-  const simulateAnalysis = (imageData: string) => {
+  const analyzeImage = async (imageData: string) => {
     setIsAnalyzing(true);
 
-    setTimeout(() => {
-      onImageCaptured(imageData);
-    }, 3000);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-plastic-image', {
+        body: { image: imageData }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.isPlastic) {
+        toast({
+          title: "No Plastic Detected",
+          description: data.description || "The image doesn't appear to contain recyclable plastic materials.",
+          variant: "destructive",
+        });
+        setIsAnalyzing(false);
+        return;
+      }
+
+      onImageCaptured(imageData, data);
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast({
+        title: "Analysis Failed",
+        description: "Unable to analyze the image. Please try again with a clearer photo.",
+        variant: "destructive",
+      });
+      setIsAnalyzing(false);
+    }
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,7 +61,7 @@ export const CameraInterface = ({ onBack, onImageCaptured }: CameraInterfaceProp
     const reader = new FileReader();
     reader.onload = (e) => {
       const result = e.target?.result as string;
-      simulateAnalysis(result);
+      analyzeImage(result);
     };
     reader.readAsDataURL(file);
   };
@@ -163,7 +192,7 @@ export const CameraInterface = ({ onBack, onImageCaptured }: CameraInterfaceProp
                     variant="camera"
                     size="lg"
                     className="w-full"
-                    onClick={() => simulateAnalysis('/placeholder.svg')}
+                    onClick={triggerFileInput}
                   >
                     <Camera className="h-5 w-5 mr-2" />
                     Take Photo

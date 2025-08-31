@@ -27,18 +27,9 @@ export default function Index() {
     }
   };
 
-  const handleImageCaptured = (image: string) => {
+  const handleImageCaptured = (image: string, analysis: any) => {
     setCapturedImage(image);
-    setAnalysisResult({
-        plasticType: "PET (Polyethylene Terephthalate)",
-        quality: "High",
-        recyclingCode: "1",
-        estimatedValue: 45.50,
-        description: "PET is highly recyclable and in high demand for making new bottles and containers.",
-        properties: ["Food-safe", "Lightweight", "Durable", "Crystal clear"],
-        marketDemand: "High",
-        nearbyVendors: 8
-    });
+    setAnalysisResult(analysis);
     setAppState('analysis');
   };
 
