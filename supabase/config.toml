@@ -1,4 +1,1 @@
 project_id = "iovpdobrrycvlqwvxcbr"
-
-[functions.analyze-plastic-image]
-verify_jwt = false
