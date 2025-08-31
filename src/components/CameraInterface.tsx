@@ -18,32 +18,52 @@ export const CameraInterface = ({ onBack, onImageCaptured }: CameraInterfaceProp
 
   const analyzeImage = async (imageData: string) => {
     setIsAnalyzing(true);
+    
+    console.log('Starting image analysis...', { imageSize: imageData.length });
 
     try {
+      console.log('Calling analyze-plastic-image function...');
+      
       const { data, error } = await supabase.functions.invoke('analyze-plastic-image', {
         body: { image: imageData }
       });
 
+      console.log('Function response:', { data, error });
+
       if (error) {
+        console.error('Supabase function error:', error);
         throw error;
       }
+
+      console.log('Analysis result:', data);
 
       if (!data.isPlastic) {
         toast({
           title: "No Plastic Detected",
-          description: data.description || "The image doesn't appear to contain recyclable plastic materials.",
+          description: data.description || "The image doesn't appear to contain recyclable plastic materials. Please try with a clearer image of plastic items.",
           variant: "destructive",
         });
         setIsAnalyzing(false);
         return;
       }
 
+      // Validate the analysis result has required fields
+      if (!data.plasticType || data.estimatedValue === undefined) {
+        console.error('Invalid analysis result:', data);
+        throw new Error('Invalid analysis result received');
+      }
+
+      toast({
+        title: "Analysis Complete!",
+        description: `Detected: ${data.plasticType} worth ₹${data.estimatedValue.toFixed(2)}`,
+      });
+
       onImageCaptured(imageData, data);
     } catch (error) {
       console.error('Analysis error:', error);
       toast({
         title: "Analysis Failed",
-        description: "Unable to analyze the image. Please try again with a clearer photo.",
+        description: "Unable to analyze the image. Please try again with a clearer photo of plastic items.",
         variant: "destructive",
       });
       setIsAnalyzing(false);

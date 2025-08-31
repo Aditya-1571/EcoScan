@@ -15,13 +15,24 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Analyze plastic image function called');
+    
     const { image } = await req.json();
     
     if (!image) {
+      console.error('No image provided in request');
       throw new Error('No image provided');
     }
 
-    console.log('Analyzing image with OpenAI...');
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not configured');
+      throw new Error('OpenAI API key not configured');
+    }
+
+    console.log('Analyzing image with OpenAI...', { 
+      imageLength: image.length,
+      imagePrefix: image.substring(0, 30) 
+    });
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -34,13 +45,41 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert plastic identification AI. Analyze the uploaded image and determine if it contains plastic materials. If plastic is detected, provide detailed analysis including type, quality, recycling code, and market value estimation.
+            content: `You are an expert plastic identification AI specializing in recycling and waste management. Your task is to analyze images for plastic materials and provide accurate, detailed assessments.
 
-Return your response as a JSON object with this exact structure:
+ANALYSIS REQUIREMENTS:
+1. Identify if the image contains ANY plastic materials (bottles, containers, packaging, bags, etc.)
+2. If plastic is found, provide comprehensive analysis
+3. Focus on recyclable plastic types commonly found in India
+4. Be realistic about market values and demand
+
+PLASTIC IDENTIFICATION GUIDE:
+- PET (#1): Clear bottles, food containers - highly recyclable
+- HDPE (#2): Milk jugs, detergent bottles - good market value  
+- PVC (#3): Pipes, bottles - limited recycling
+- LDPE (#4): Plastic bags, wraps - lower value
+- PP (#5): Yogurt containers, bottle caps - moderate value
+- PS (#6): Disposable cups, foam - low recyclability
+- Other (#7): Mixed plastics - varies
+
+QUALITY ASSESSMENT:
+- High: Clean, undamaged, clear labels/codes visible
+- Medium: Some dirt/wear but structurally sound
+- Low: Damaged, heavily soiled, or degraded
+
+MARKET VALUES (Indian market):
+- PET: ₹15-25 per kg
+- HDPE: ₹20-30 per kg  
+- PP: ₹18-28 per kg
+- LDPE: ₹10-18 per kg
+- PS: ₹5-12 per kg
+- PVC: ₹8-15 per kg
+
+Return ONLY valid JSON in this exact structure:
 {
   "isPlastic": boolean,
   "plasticType": string,
-  "quality": "high" | "medium" | "low",
+  "quality": "high" | "medium" | "low", 
   "recyclingCode": string,
   "estimatedValue": number,
   "description": string,
@@ -49,22 +88,19 @@ Return your response as a JSON object with this exact structure:
   "nearbyVendors": number
 }
 
-If no plastic is detected, set isPlastic to false and provide a brief explanation in the description field.
-
-For plastic identification, consider:
-- Common plastic types: PET, HDPE, PVC, LDPE, PP, PS, etc.
-- Quality based on visible condition, cleanliness, and integrity
-- Recycling codes (1-7)
-- Market value in Indian Rupees per gram
-- Properties like durability, recyclability, flexibility
-- Market demand based on current recycling trends`
+IMPORTANT: 
+- If no clear plastic is visible, set isPlastic to false
+- For estimatedValue, calculate based on estimated weight and market rate
+- Include 3-5 relevant properties
+- Set nearbyVendors between 3-15 based on plastic type demand
+- Keep descriptions concise but informative`
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Please analyze this image to identify if it contains plastic and provide detailed analysis if plastic is found.'
+                text: 'Please analyze this image to identify if it contains plastic and provide detailed analysis if plastic is found. Focus on accuracy and realistic market assessments for the Indian recycling market.'
               },
               {
                 type: 'image_url',
@@ -75,62 +111,96 @@ For plastic identification, consider:
             ]
           }
         ],
-        max_tokens: 1000
+        max_tokens: 1500,
+        temperature: 0.3
       }),
     });
 
+    console.log('OpenAI API response status:', response.status);
+
     if (!response.ok) {
-      console.error('OpenAI API Error:', response.status, response.statusText);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('OpenAI API Error:', response.status, response.statusText, errorText);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('OpenAI Response:', JSON.stringify(data, null, 2));
+    console.log('OpenAI Response received:', { 
+      hasChoices: !!data.choices,
+      choicesLength: data.choices?.length,
+      finishReason: data.choices?.[0]?.finish_reason
+    });
     
-    const content = data.choices[0].message.content;
+    const content = data.choices?.[0]?.message?.content;
+    
+    if (!content) {
+      console.error('No content in OpenAI response:', data);
+      throw new Error('Empty response from OpenAI');
+    }
+
+    console.log('OpenAI content:', content.substring(0, 200) + '...');
     
     try {
-      const analysisResult = JSON.parse(content);
+      // Clean the content to extract JSON
+      let jsonContent = content.trim();
+      
+      // Remove code blocks if present
+      if (jsonContent.startsWith('```json')) {
+        jsonContent = jsonContent.replace(/```json\n?/, '').replace(/```$/, '');
+      } else if (jsonContent.startsWith('```')) {
+        jsonContent = jsonContent.replace(/```\n?/, '').replace(/```$/, '');
+      }
+      
+      const analysisResult = JSON.parse(jsonContent);
       
       // Validate the response structure
       if (!analysisResult.hasOwnProperty('isPlastic')) {
-        throw new Error('Invalid response structure from AI');
+        console.error('Missing isPlastic field in response');
+        throw new Error('Invalid response structure from AI - missing isPlastic field');
       }
+
+      console.log('Successfully parsed analysis result:', analysisResult);
 
       return new Response(JSON.stringify(analysisResult), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError);
+      console.error('Failed to parse AI response as JSON:', parseError);
+      console.error('Raw content:', content);
+      
       // Return a fallback response
-      return new Response(JSON.stringify({
+      const fallbackResponse = {
         isPlastic: false,
-        plasticType: "Unknown",
+        plasticType: "Analysis Error",
         quality: "medium",
         recyclingCode: "7",
         estimatedValue: 0,
-        description: "Unable to analyze the image. Please ensure the image is clear and contains visible plastic items.",
-        properties: ["Analysis Failed"],
+        description: "Unable to parse the AI analysis response. The image may be unclear or contain no identifiable plastic items. Please try uploading a clearer image of plastic items.",
+        properties: ["Parse Error"],
         marketDemand: "low",
         nearbyVendors: 0
-      }), {
+      };
+      
+      return new Response(JSON.stringify(fallbackResponse), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
   } catch (error) {
     console.error('Error in analyze-plastic-image function:', error);
-    return new Response(JSON.stringify({ 
-      error: error.message,
+    
+    const errorResponse = {
       isPlastic: false,
-      plasticType: "Error",
+      plasticType: "System Error",
       quality: "low",
       recyclingCode: "7",
       estimatedValue: 0,
-      description: "An error occurred during analysis. Please try again.",
-      properties: ["Error"],
+      description: `Analysis failed: ${error.message}. Please try again with a clear image of plastic items.`,
+      properties: ["System Error"],
       marketDemand: "low",
       nearbyVendors: 0
-    }), {
+    };
+    
+    return new Response(JSON.stringify(errorResponse), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
